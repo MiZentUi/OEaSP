@@ -28,6 +28,8 @@ typedef struct {
     int index;
     int pid;
     uint64_t operations;
+    uint64_t wait_ns;
+    uint64_t max_wait_ns;
     uint64_t records;
 } worker_stats_t;
 
@@ -38,6 +40,7 @@ typedef struct shared_state {
     record_t table[TABLE_SIZE];
 
     pthread_mutex_t table_mutex;
+    pthread_mutex_t journal_mutex;
     sem_t start_gate;
 
     struct timespec start_time;

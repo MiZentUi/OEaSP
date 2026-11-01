@@ -32,6 +32,7 @@ static void child_main(const char *name, const cli_options_t *options,
     shared_state_t *state = NULL;
     int rc;
 
+    cli_bind(NULL, false);
     // the child opens its own mapping instead of using the inherited address
     shared_detach(parent_state);
 
@@ -45,7 +46,9 @@ static void child_main(const char *name, const cli_options_t *options,
         _exit(1);
     }
 
+    cli_bind(state, options->quiet);
     rc = worker_run(state, options, role, index, slot);
+    cli_bind(NULL, false);
     shared_detach(state);
     _exit(rc == 0 ? 0 : 1);
 }
@@ -70,12 +73,12 @@ static bool table_is_consistent(shared_state_t *state)
     bool consistent = true;
 
     if (state->magic != SHARED_MAGIC) {
-        cli_error("ERROR shared magic is invalid");
+        cli_error("ERROR invariant shared magic is invalid");
         consistent = false;
     }
 
     if (model_check(state) != 0) {
-        cli_error("ERROR table is inconsistent");
+        cli_error("ERROR invariant table is inconsistent");
         consistent = false;
     }
 
@@ -116,6 +119,8 @@ int manager_run(const cli_options_t *options)
     initialized = true;
     model_init(state);
 
+    cli_bind(state, options->quiet);
+
     for (index = 0; index < participants; ++index) {
         worker_role_t role;
         int worker_index;
@@ -147,6 +152,12 @@ int manager_run(const cli_options_t *options)
         if (clock_gettime(CLOCK_MONOTONIC, &state->start_time) < 0) {
             cli_error("ERROR clock_gettime failed: %s", strerror(errno));
             launch_failed = true;
+        } else {
+            cli_event("MANAGER pid=%d START writers=%d readers=%d records=%d "
+                      "ops=%lu write_us=%ld read_us=%ld",
+                      (int)getpid(), WRITER_COUNT, READER_COUNT,
+                      TABLE_SIZE, options->operations, options->write_us,
+                      options->read_us);
         }
     }
 
@@ -197,6 +208,7 @@ int manager_run(const cli_options_t *options)
     result = table_consistent && child_failures == 0 && !launch_failed ? 0 : 1;
 
 cleanup:
+    cli_bind(NULL, false);
     if (state != NULL) {
         if (initialized) {
             shared_state_destroy(state);

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "timing.h"
 
@@ -19,8 +20,12 @@
 enum {
     OPT_OPERATIONS = 1000,
     OPT_WRITE_US,
-    OPT_READ_US
+    OPT_READ_US,
+    OPT_QUIET
 };
+
+static shared_state_t *g_state;
+static bool g_quiet;
 
 static void usage_to(FILE *stream, const char *program)
 {
@@ -31,6 +36,7 @@ static void usage_to(FILE *stream, const char *program)
             "  --operations N       operations per process (default %d)\n"
             "  --write-us N         write duration in microseconds (default %ld)\n"
             "  --read-us N          read duration in microseconds (default %ld)\n"
+            "  --quiet              disable the event journal\n"
             "  --help               show this help\n",
             program, DEFAULT_OPERATIONS, DEFAULT_WRITE_US, DEFAULT_READ_US);
 }
@@ -67,6 +73,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         {"operations", required_argument, NULL, OPT_OPERATIONS},
         {"write-us", required_argument, NULL, OPT_WRITE_US},
         {"read-us", required_argument, NULL, OPT_READ_US},
+        {"quiet", no_argument, NULL, OPT_QUIET},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0}
     };
@@ -75,6 +82,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     options->write_us = DEFAULT_WRITE_US;
     options->read_us = DEFAULT_READ_US;
     options->seed = DEFAULT_SEED;
+    options->quiet = false;
 
     opterr = 0;
     while ((option = getopt_long(argc, argv, "h", long_options,
@@ -100,6 +108,9 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
             }
             options->read_us = value;
             break;
+        case OPT_QUIET:
+            options->quiet = true;
+            break;
         case 'h':
             cli_usage();
             return CLI_HELP;
@@ -119,15 +130,117 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     return CLI_OK;
 }
 
-void cli_error(const char *format, ...)
+void cli_bind(shared_state_t *state, bool quiet)
 {
+    g_state = state;
+    g_quiet = quiet;
+}
+
+static uint64_t elapsed_ms(const shared_state_t *state)
+{
+    struct timespec now;
+
+    if (state == NULL ||
+        (state->start_time.tv_sec == 0 && state->start_time.tv_nsec == 0)) {
+        return 0;
+    }
+    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) {
+        return 0;
+    }
+    if (now.tv_sec < state->start_time.tv_sec) {
+        return 0;
+    }
+    return timing_diff_ns(&state->start_time, &now) / 1000000ULL;
+}
+
+static bool lock_journal(void)
+{
+    int rc;
+
+    if (g_state == NULL) {
+        return false;
+    }
+
+    rc = pthread_mutex_lock(&g_state->journal_mutex);
+    if (rc == EOWNERDEAD) {
+        if (pthread_mutex_consistent(&g_state->journal_mutex) != 0) {
+            pthread_mutex_unlock(&g_state->journal_mutex);
+            return false;
+        }
+        return true;
+    }
+    return rc == 0;
+}
+
+static void write_console(int fd, const char *line, int length)
+{
+    size_t size;
+
+    if (length <= 0) {
+        return;
+    }
+    size = (size_t)length;
+    if (size > 511) {
+        size = 511;
+    }
+    (void)write(fd, line, size);
+}
+
+void cli_event(const char *format, ...)
+{
+    char message[384];
+    char line[512];
     va_list arguments;
+    int length;
+    bool locked;
+
+    if (g_state == NULL || g_quiet) {
+        return;
+    }
+
+    // one locked write keeps journal lines intact across processes
+    locked = lock_journal();
+    if (!locked) {
+        return;
+    }
 
     va_start(arguments, format);
-    vfprintf(stderr, format, arguments);
+    vsnprintf(message, sizeof(message), format, arguments);
     va_end(arguments);
-    fputc('\n', stderr);
-    fflush(stderr);
+
+    length = snprintf(line, sizeof(line), "[%06" PRIu64 " ms] %s\n",
+                      elapsed_ms(g_state), message);
+    write_console(STDOUT_FILENO, line, length);
+    pthread_mutex_unlock(&g_state->journal_mutex);
+}
+
+void cli_error(const char *format, ...)
+{
+    char message[384];
+    char line[512];
+    va_list arguments;
+    int length;
+    bool locked = false;
+
+    va_start(arguments, format);
+    vsnprintf(message, sizeof(message), format, arguments);
+    va_end(arguments);
+
+    if (g_state != NULL) {
+        locked = lock_journal();
+    }
+
+    if (g_state != NULL && locked) {
+        length = snprintf(line, sizeof(line), "[%06" PRIu64 " ms] %s\n",
+                          elapsed_ms(g_state), message);
+    } else {
+        length = snprintf(line, sizeof(line), "%s\n", message);
+    }
+    write_console(STDERR_FILENO, line, length);
+
+    if (locked) {
+        pthread_mutex_unlock(&g_state->journal_mutex);
+    }
 }
 
 void cli_report(const cli_options_t *options, const shared_state_t *state,
@@ -160,19 +273,25 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
     expected_operations = options->operations * (uint64_t)participants;
 
     printf("\n");
-    printf("=== LR4 basic writers-readers ===\n");
+    printf("=== LR4 shared table: initial version ===\n");
     printf("writers=%d readers=%d records=%u operations=%lu\n",
            WRITER_COUNT, READER_COUNT, state->table_size,
            options->operations);
-    printf("%-7s %-3s %-7s %-10s %-10s\n", "ROLE", "ID", "PID", "OPS",
-           "RECORDS");
+    printf("%-7s %-3s %-7s %-10s %-12s %-12s %-10s\n", "ROLE", "ID", "PID",
+           "OPS", "AVG_WAIT_MS", "MAX_WAIT_MS", "RECORDS");
 
     for (index = 0; index < participants; ++index) {
         const worker_stats_t *stats = &state->stats[index];
+        double average_wait = stats->operations == 0
+                                  ? 0.0
+                                  : (double)stats->wait_ns /
+                                        (double)stats->operations / 1000000.0;
 
-        printf("%-7s %-3d %-7d %-10" PRIu64 " %-10" PRIu64 "\n",
+        printf("%-7s %-3d %-7d %-10" PRIu64 " %-12.3f %-12.3f %-10" PRIu64
+               "\n",
                stats->role == ROLE_WRITER ? "WRITER" : "READER",
-               stats->index, stats->pid, stats->operations, stats->records);
+               stats->index, stats->pid, stats->operations, average_wait,
+               (double)stats->max_wait_ns / 1000000.0, stats->records);
     }
 
     printf("elapsed_ms=%.3f throughput_ops_s=%.3f\n",

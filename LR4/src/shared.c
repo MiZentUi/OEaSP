@@ -134,7 +134,15 @@ int shared_state_init(shared_state_t *state)
         return -1;
     }
 
+    rc = init_mutex(&state->journal_mutex);
+    if (rc != 0) {
+        pthread_mutex_destroy(&state->table_mutex);
+        errno = rc;
+        return -1;
+    }
+
     if (sem_init(&state->start_gate, 1, 0) < 0) {
+        pthread_mutex_destroy(&state->journal_mutex);
         pthread_mutex_destroy(&state->table_mutex);
         return -1;
     }
@@ -150,5 +158,6 @@ void shared_state_destroy(shared_state_t *state)
     }
 
     sem_destroy(&state->start_gate);
+    pthread_mutex_destroy(&state->journal_mutex);
     pthread_mutex_destroy(&state->table_mutex);
 }

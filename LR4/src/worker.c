@@ -1,6 +1,7 @@
 #include "worker.h"
 
 #include <errno.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -62,11 +63,28 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
         return 1;
     }
 
+    cli_event("%s %d pid=%d START records=%d", name, index,
+              (int)getpid(), TABLE_SIZE);
+
     for (operation = 1; operation <= options->operations; ++operation) {
+        uint64_t wait_ns;
         long duration_us;
         int rc;
 
-        rc = table_enter(state);
+        cli_event("%s %d pid=%d WAITING ACCESS=%s op=%lu", name, index,
+                  (int)getpid(), access, operation);
+
+        {
+            uint64_t wait_start = timing_now_ns();
+
+            rc = table_enter(state);
+            wait_ns = timing_now_ns() - wait_start;
+        }
+        stats->wait_ns += wait_ns;
+        if (wait_ns > stats->max_wait_ns) {
+            stats->max_wait_ns = wait_ns;
+        }
+
         if (rc != 0) {
             cli_error("ERROR %s %d pid=%d access=%s op=%lu error=%s", name,
                       index, (int)getpid(), access, operation, strerror(rc));
@@ -74,9 +92,15 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
         }
 
         if (role == ROLE_WRITER) {
+            cli_event("%s %d pid=%d ACQUIRED ACCESS=WRITE op=%lu", name,
+                      index, (int)getpid(), operation);
             model_write(state);
             stats->records += TABLE_SIZE;
+            cli_event("%s %d pid=%d WRITING generation=%u records=%d", name,
+                      index, (int)getpid(), state->generation, TABLE_SIZE);
         } else {
+            cli_event("%s %d pid=%d ACQUIRED ACCESS=READ op=%lu", name,
+                      index, (int)getpid(), operation);
             if (model_check(state) != 0) {
                 cli_error("ERROR %s %d pid=%d inconsistent table", name,
                           index, (int)getpid());
@@ -84,6 +108,8 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
                 return 1;
             }
             stats->records += TABLE_SIZE;
+            cli_event("%s %d pid=%d READING generation=%u records=%d", name,
+                      index, (int)getpid(), state->generation, TABLE_SIZE);
         }
 
         if (role == ROLE_WRITER) {
@@ -103,7 +129,11 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
         }
 
         stats->operations++;
+        cli_event("%s %d pid=%d RELEASED ACCESS=%s op=%lu", name, index,
+                  (int)getpid(), access, operation);
     }
 
+    cli_event("%s %d pid=%d FINISHED ops=%" PRIu64, name, index,
+              (int)getpid(), stats->operations);
     return 0;
 }
