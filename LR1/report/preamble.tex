@@ -1,0 +1,199 @@
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{ragged2e}
+\usepackage{varwidth}
+\usepackage{indentfirst}
+\usepackage{calc}
+\usepackage{tabularx}
+
+\usepackage[small]{titlesec}
+\usepackage[a4paper,
+    left=30mm,
+    right=15mm,
+    top=20mm,
+    bottom=20mm]{geometry}
+
+\justifying
+\sloppy
+
+\usepackage{fontspec}
+
+\defaultfontfeatures{Ligatures={TeX},Renderer=Basic}
+\setmainfont[Ligatures={TeX,Historic}]{Times New Roman}
+\setlength{\parindent}{1.25cm}
+
+\linespread{1}
+
+% hyperlinks
+\usepackage[final,hidelinks]{hyperref}
+
+\renewcommand{\UrlFont}{}
+
+% resourses list
+\usepackage[square,numbers,sort&compress]{natbib}
+
+\bibliographystyle{belarus-specific-utf8gost780u}
+\setlength{\bibsep}{0em}
+\def\BibUrlRus#1{-- Режим доступа~: \url{#1}}
+\def\BibDateRus#1{-- Дата доступа~: \parsedate{#1}}
+\def\BibUrl#1{\BibUrlRus{#1}}
+\def\BibDate#1{\BibDateRus{#1}}
+\def\BibTitleFormat#1{\StrSubstitute{#1}{ - }{ -- }}
+
+% page numbering
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[R]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\addtocontents{toc}{\protect\thispagestyle{fancy}}
+
+% lists
+\usepackage{enumitem}
+
+\setlist{
+    topsep=0em,
+    itemsep=0em,
+    parsep=0em,
+    listparindent=\parindent
+}
+
+\setlist[itemize,0]{itemindent=\parindent + 2.2ex, leftmargin=0ex, label=--}
+\setlist[enumerate,1]{itemindent=\parindent + 2.7ex, leftmargin=0ex, label=\arabic*}
+\setlist[enumerate,2]{itemindent=\parindent + \parindent - 2.7ex, label=\arabic*}
+\renewcommand{\labelitemi}{\textendash}
+
+% code listing
+\usepackage{listings}
+\usepackage[dvipsnames]{xcolor}
+
+\lstset{
+    columns=fullflexible,
+    basicstyle=\ttfamily\small,
+    tabsize=4,
+    breaklines=true,
+    breakatwhitespace=false,
+    showstringspaces=false,
+    language=C++,
+    linewidth=\textwidth,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{Green},
+}
+
+% sections and toc
+\newcommand{\sectionuppercase}[1]{\section[#1]{\uppercase{#1}}}
+
+\makeatletter
+\renewcommand{\@pnumwidth}{1em}
+\renewcommand{\@dotsep}{1}
+\renewcommand{\l@section}{\@dottedtocline{1}{0.5em}{1.2em}}
+\renewcommand{\l@subsection}{\@dottedtocline{2}{1.7em}{2.0em}}
+\makeatother
+
+\titleformat*{\section}{\bfseries\MakeUppercase}
+
+% images
+\usepackage{graphicx}
+\usepackage{float}
+
+\graphicspath{ {images/} }
+
+% images and tables caption
+\usepackage{caption}
+\usepackage{subcaption}
+
+% FIXME: more than one line spacing after caption
+
+\setlength{\intextsep}{\baselineskip}
+
+\DeclareCaptionLabelFormat{stbfigure}{Рисунок #2}
+\DeclareCaptionLabelFormat{stbtable}{Таблица #2}
+\DeclareCaptionLabelSeparator{stb}{~--~}
+\captionsetup{labelsep=stb}
+\captionsetup[figure]{
+    labelformat=stbfigure,
+    aboveskip=\baselineskip,
+    belowskip=0pt,
+    justification=centering
+}
+
+% for table use tabularx
+\captionsetup[table]{
+    labelformat=stbtable,
+    aboveskip=0pt,
+    format=hang,
+    justification=raggedright,
+    singlelinecheck=false
+}
+\renewcommand{\thesubfigure}{\asbuk{subfigure}}
+
+\AtBeginDocument{\numberwithin{table}{section}}
+\AtBeginDocument{\numberwithin{figure}{section}}
+
+% sections spacing and styles
+% TODO: rewrite
+
+\newlength{\fivecharsapprox}
+\setlength{\fivecharsapprox}{1.25cm}
+
+\titlespacing{\sectioncentered}
+{0em}
+{-1.5em plus -1ex minus -.2ex}
+{1em plus .2ex}
+
+\titlespacing{\section}
+{\fivecharsapprox}
+{-1.5em plus -1ex minus -.2ex}
+{1em plus .2ex}
+
+\titlespacing{\subsection}
+{\fivecharsapprox}
+{1em plus 1ex minus .2ex}
+{1em plus .2ex}
+
+\titleformat{\subsubsection}[runin]
+{\pretolerance=10000\filright\normalfont}
+{\bfseries\thesubsubsection}
+{0.5em}
+{}
+[\hspace*{0em}]
+
+\titlespacing{\subsubsection}
+{\fivecharsapprox}
+{0em}
+{0em}
+
+% annex section
+% TODO: rewrite
+
+\usepackage{totcount}
+
+\makeatletter
+\def\@annexAlph#1{%
+    \ifcase#1\or А\or Б\or В\or Г\or Д\or Е\or Ж\or И\or К\or Л\or%
+        М\or Н\or П\or Р\or С\or Т\or У\or Ф\or Х\or Ц\or Ш\or Щ\or Э\or%
+        Ю\or Я\else\@ctrerr\fi%
+}
+\def\annexAlph#1{\expandafter\@annexAlph\csname c@#1\endcsname}
+\makeatother
+
+\newtotcounter{equation_annex}
+
+\newcommand{\addtocline}[2]{
+    \phantomsection
+    \addcontentsline{toc}{#1}{#2}
+}
+
+\newcommand{\annex}[2]{
+    \newpage
+    \stepcounter{equation_annex}
+    \centerline{\textbf{ПРИЛОЖЕНИЕ \annexAlph{equation_annex}}}
+    \centerline{(\textbf{#1})}
+    \addtocline{section}{Приложение \annexAlph{equation_annex} (#1) #2}
+    \centerline{\textbf{#2}}
+}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
