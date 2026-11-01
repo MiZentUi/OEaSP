@@ -7,12 +7,17 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 set(STUDENT_ID "103" CACHE STRING "Student ID")
 
+find_package(Threads REQUIRED)
+
 add_executable(lr4
     src/main.c
     src/cli.c
     src/shared.c
+    src/sync.c
     src/model.c
+    src/worker.c
     src/manager.c
+    src/timing.c
 )
 
 target_include_directories(lr4 PRIVATE include)
@@ -21,7 +26,7 @@ target_compile_definitions(lr4 PRIVATE
     _POSIX_C_SOURCE=200809L
     _DEFAULT_SOURCE
 )
-target_link_libraries(lr4 PRIVATE rt)
+target_link_libraries(lr4 PRIVATE Threads::Threads rt)
 
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(lr4 PRIVATE -Wall -Wextra -Wpedantic)

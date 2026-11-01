@@ -1,10 +1,21 @@
 #ifndef SHARED_H
 #define SHARED_H
 
+#include <pthread.h>
+#include <semaphore.h>
 #include <stdint.h>
+#include <time.h>
 
 #define TABLE_SIZE 100
+#define MAX_PARTICIPANTS 32
+#define WRITER_COUNT 1
+#define READER_COUNT 1
 #define SHARED_MAGIC 0x4c523400u
+
+typedef enum {
+    ROLE_WRITER = 0,
+    ROLE_READER = 1
+} worker_role_t;
 
 typedef struct {
     uint32_t id;
@@ -12,11 +23,25 @@ typedef struct {
     uint32_t value;
 } record_t;
 
+typedef struct {
+    worker_role_t role;
+    int index;
+    int pid;
+    uint64_t operations;
+    uint64_t records;
+} worker_stats_t;
+
 typedef struct shared_state {
     uint32_t magic;
     uint32_t table_size;
     uint32_t generation;
     record_t table[TABLE_SIZE];
+
+    pthread_mutex_t table_mutex;
+    sem_t start_gate;
+
+    struct timespec start_time;
+    worker_stats_t stats[MAX_PARTICIPANTS];
 } shared_state_t;
 
 int shared_create(const char *name, shared_state_t **out);

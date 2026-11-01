@@ -96,15 +96,59 @@ int shared_remove(const char *name)
     return shm_unlink(name);
 }
 
+static int init_mutex(pthread_mutex_t *mutex)
+{
+    pthread_mutexattr_t attributes;
+    int rc;
+
+    // shared objects must be visible to every process and recover after death
+    rc = pthread_mutexattr_init(&attributes);
+    if (rc != 0) {
+        return rc;
+    }
+
+    rc = pthread_mutexattr_setpshared(&attributes, PTHREAD_PROCESS_SHARED);
+#ifdef PTHREAD_MUTEX_ROBUST
+    if (rc == 0) {
+        rc = pthread_mutexattr_setrobust(&attributes, PTHREAD_MUTEX_ROBUST);
+    }
+#endif
+    if (rc == 0) {
+        rc = pthread_mutex_init(mutex, &attributes);
+    }
+
+    pthread_mutexattr_destroy(&attributes);
+    return rc;
+}
+
 int shared_state_init(shared_state_t *state)
 {
+    int rc;
+
     memset(state, 0, sizeof(*state));
     state->table_size = TABLE_SIZE;
+
+    rc = init_mutex(&state->table_mutex);
+    if (rc != 0) {
+        errno = rc;
+        return -1;
+    }
+
+    if (sem_init(&state->start_gate, 1, 0) < 0) {
+        pthread_mutex_destroy(&state->table_mutex);
+        return -1;
+    }
+
     state->magic = SHARED_MAGIC;
     return 0;
 }
 
 void shared_state_destroy(shared_state_t *state)
 {
-    (void)state;
+    if (state == NULL) {
+        return;
+    }
+
+    sem_destroy(&state->start_gate);
+    pthread_mutex_destroy(&state->table_mutex);
 }
