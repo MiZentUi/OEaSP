@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="DejaVu Sans, Arial, sans-serif">
+<defs>
+  <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5F6368"/></marker>
+  <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1A73E8"/></marker>
+  <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#D93025"/></marker>
+</defs>
+<rect x="0" y="0" width="960" height="620" fill="#FFFFFF"/>
+
+<rect x="330" y="25" width="300" height="85" rx="12" fill="#E8F0FE" stroke="#1A73E8" stroke-width="2"/>
+<text x="480" y="58" font-size="26" font-weight="bold" fill="#202124" text-anchor="middle">MANAGER</text>
+<text x="480" y="82" font-size="17" font-weight="normal" fill="#3C4043" text-anchor="middle">менеджер процессов</text>
+<text x="480" y="102" font-size="14" font-weight="normal" fill="#5F6368" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">fork · waitpid · cleanup</text>
+<rect x="700" y="230" width="230" height="150" rx="12" fill="#E6F4EA" stroke="#137333" stroke-width="2"/>
+<text x="815" y="264" font-size="26" font-weight="bold" fill="#202124" text-anchor="middle">SERVER</text>
+<text x="815" y="291" font-size="15" font-weight="normal" fill="#137333" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">AF_UNIX / SOCK_DGRAM</text>
+<text x="815" y="318" font-size="14" font-weight="normal" fill="#3C4043" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">bind(path) · recvfrom()</text>
+<text x="815" y="351" font-size="14" font-weight="normal" fill="#3C4043" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">received_&lt;RUN_ID&gt;.log</text>
+<rect x="40" y="210" width="230" height="65" rx="12" fill="#F1F3F4" stroke="#5F6368" stroke-width="2"/>
+<text x="155" y="238" font-size="22" font-weight="bold" fill="#202124" text-anchor="middle">CLIENT#1</text>
+<text x="155" y="260" font-size="15" font-weight="normal" fill="#1A73E8" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">sendto(LOG)</text>
+<rect x="40" y="300" width="230" height="65" rx="12" fill="#F1F3F4" stroke="#5F6368" stroke-width="2"/>
+<text x="155" y="328" font-size="22" font-weight="bold" fill="#202124" text-anchor="middle">CLIENT#2</text>
+<text x="155" y="350" font-size="15" font-weight="normal" fill="#1A73E8" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">sendto(LOG)</text>
+<rect x="40" y="390" width="230" height="65" rx="12" fill="#F1F3F4" stroke="#5F6368" stroke-width="2"/>
+<text x="155" y="418" font-size="22" font-weight="bold" fill="#202124" text-anchor="middle">CLIENT#3</text>
+<text x="155" y="440" font-size="15" font-weight="normal" fill="#1A73E8" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">sendto(LOG)</text>
+<rect x="40" y="485" width="230" height="65" rx="12" fill="#FEF7E0" stroke="#B06000" stroke-width="2" stroke-dasharray="7 6"/>
+<text x="155" y="513" font-size="22" font-weight="bold" fill="#8A4B00" text-anchor="middle">BENCH</text>
+<text x="155" y="535" font-size="15" font-weight="normal" fill="#8A4B00" text-anchor="middle">только в режиме bench</text>
+<path d="M 330 67.5 H 25 V 422.5" fill="none" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="25" y1="242.5" x2="38" y2="242.5" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-gray)"/>
+<line x1="25" y1="332.5" x2="38" y2="332.5" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-gray)"/>
+<line x1="25" y1="422.5" x2="38" y2="422.5" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-gray)"/>
+<text x="35" y="170" font-size="16" font-weight="normal" fill="#5F6368" text-anchor="start">fork() ×3</text>
+<path d="M 630 67.5 H 815 V 227" fill="none" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-gray)"/>
+<text x="830" y="150" font-size="16" font-weight="normal" fill="#5F6368" text-anchor="start">fork()</text>
+<path d="M 560 110 V 190 H 750 V 227" fill="none" stroke="#D93025" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-red)" stroke-dasharray="8 6"/>
+<text x="650" y="178" font-size="16" font-weight="bold" fill="#D93025" text-anchor="middle">STOP</text>
+<path d="M 270 260 L 700 270" fill="none" stroke="#1A73E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M 270 350 L 700 310" fill="none" stroke="#1A73E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<path d="M 270 440 L 700 350" fill="none" stroke="#1A73E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)"/>
+<rect x="438" y="286" width="134" height="30" rx="8" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="505" y="306" font-size="16" font-weight="normal" fill="#1A73E8" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">sendto(LOG)</text>
+<path d="M 270 517.5 H 700 V 400 H 815 V 383" fill="none" stroke="#1A73E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow-blue)" stroke-dasharray="8 6"/>
+<rect x="318" y="500" width="158" height="28" rx="8" fill="#FFFFFF" fill-opacity="0.95"/>
+<text x="397" y="519" font-size="15" font-weight="normal" fill="#1A73E8" text-anchor="middle" font-family="DejaVu Sans Mono, monospace">sendto(BENCH)</text>
+<line x1="40" y1="592" x2="82" y2="592" stroke="#5F6368" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-gray)"/>
+<text x="92" y="581" font-size="14" font-weight="normal" fill="#3C4043" text-anchor="start">fork() – создание процесса</text>
+<line x1="330" y1="592" x2="372" y2="592" stroke="#1A73E8" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-blue)"/>
+<text x="382" y="581" font-size="14" font-weight="normal" fill="#3C4043" text-anchor="start">sendto() – данные</text>
+<line x1="590" y1="592" x2="632" y2="592" stroke="#D93025" stroke-width="2.2" stroke-linecap="round" marker-end="url(#arrow-red)" stroke-dasharray="7 5"/>
+<text x="642" y="581" font-size="14" font-weight="normal" fill="#3C4043" text-anchor="start">STOP – завершение</text>
+</svg>
