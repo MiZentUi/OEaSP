@@ -12,13 +12,17 @@
 
 #include "timing.h"
 
-#define DEFAULT_OPERATIONS 5
+#define DEFAULT_WRITERS 2
+#define DEFAULT_READERS 2
+#define DEFAULT_OPERATIONS 20
 #define DEFAULT_WRITE_US 100L
 #define DEFAULT_READ_US 100L
 #define DEFAULT_SEED 12345
 
 enum {
-    OPT_OPERATIONS = 1000,
+    OPT_WRITERS = 1000,
+    OPT_READERS,
+    OPT_OPERATIONS,
     OPT_WRITE_US,
     OPT_READ_US,
     OPT_QUIET
@@ -33,12 +37,15 @@ static void usage_to(FILE *stream, const char *program)
             "usage: %s [options]\n"
             "\n"
             "options:\n"
+            "  --writers N          writer process count (default %d)\n"
+            "  --readers N          reader process count (default %d)\n"
             "  --operations N       operations per process (default %d)\n"
             "  --write-us N         write duration in microseconds (default %ld)\n"
             "  --read-us N          read duration in microseconds (default %ld)\n"
             "  --quiet              disable the event journal\n"
             "  --help               show this help\n",
-            program, DEFAULT_OPERATIONS, DEFAULT_WRITE_US, DEFAULT_READ_US);
+            program, DEFAULT_WRITERS, DEFAULT_READERS, DEFAULT_OPERATIONS,
+            DEFAULT_WRITE_US, DEFAULT_READ_US);
 }
 
 void cli_usage(void)
@@ -70,6 +77,8 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     int option_index = 0;
 
     static const struct option long_options[] = {
+        {"writers", required_argument, NULL, OPT_WRITERS},
+        {"readers", required_argument, NULL, OPT_READERS},
         {"operations", required_argument, NULL, OPT_OPERATIONS},
         {"write-us", required_argument, NULL, OPT_WRITE_US},
         {"read-us", required_argument, NULL, OPT_READ_US},
@@ -78,6 +87,8 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         {NULL, 0, NULL, 0}
     };
 
+    options->writers = DEFAULT_WRITERS;
+    options->readers = DEFAULT_READERS;
     options->operations = DEFAULT_OPERATIONS;
     options->write_us = DEFAULT_WRITE_US;
     options->read_us = DEFAULT_READ_US;
@@ -90,6 +101,20 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         long value;
 
         switch (option) {
+        case OPT_WRITERS:
+            if (parse_long("writers", optarg, 1, MAX_PARTICIPANTS,
+                           &value) < 0) {
+                return CLI_ERROR;
+            }
+            options->writers = (int)value;
+            break;
+        case OPT_READERS:
+            if (parse_long("readers", optarg, 1, MAX_PARTICIPANTS,
+                           &value) < 0) {
+                return CLI_ERROR;
+            }
+            options->readers = (int)value;
+            break;
         case OPT_OPERATIONS:
             if (parse_long("operations", optarg, 1, 1000000, &value) < 0) {
                 return CLI_ERROR;
@@ -124,6 +149,12 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     if (optind < argc) {
         cli_error("ERROR unexpected argument: %s", argv[optind]);
         usage_to(stderr, argv[0]);
+        return CLI_ERROR;
+    }
+
+    if (options->writers + options->readers > MAX_PARTICIPANTS) {
+        cli_error("ERROR too many participants: %d",
+                  options->writers + options->readers);
         return CLI_ERROR;
     }
 
@@ -250,7 +281,7 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
     uint64_t total_operations = 0;
     uint64_t total_records = 0;
     uint64_t expected_operations;
-    int participants = WRITER_COUNT + READER_COUNT;
+    int participants = options->writers + options->readers;
     int index;
 
     {
@@ -273,9 +304,9 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
     expected_operations = options->operations * (uint64_t)participants;
 
     printf("\n");
-    printf("=== LR4 shared table: initial version ===\n");
+    printf("=== LR4 writers-readers: single mutex ===\n");
     printf("writers=%d readers=%d records=%u operations=%lu\n",
-           WRITER_COUNT, READER_COUNT, state->table_size,
+           options->writers, options->readers, state->table_size,
            options->operations);
     printf("%-7s %-3s %-7s %-10s %-12s %-12s %-10s\n", "ROLE", "ID", "PID",
            "OPS", "AVG_WAIT_MS", "MAX_WAIT_MS", "RECORDS");

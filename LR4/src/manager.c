@@ -90,7 +90,7 @@ int manager_run(const cli_options_t *options)
     char name[64] = "";
     shared_state_t *state = NULL;
     pid_t pids[MAX_PARTICIPANTS];
-    int participants = WRITER_COUNT + READER_COUNT;
+    int participants = options->writers + options->readers;
     int started = 0;
     int child_failures = 0;
     bool initialized = false;
@@ -126,12 +126,12 @@ int manager_run(const cli_options_t *options)
         int worker_index;
         pid_t pid;
 
-        if (index < WRITER_COUNT) {
+        if (index < options->writers) {
             role = ROLE_WRITER;
             worker_index = index;
         } else {
             role = ROLE_READER;
-            worker_index = index - WRITER_COUNT;
+            worker_index = index - options->writers;
         }
 
         pid = fork();
@@ -155,7 +155,7 @@ int manager_run(const cli_options_t *options)
         } else {
             cli_event("MANAGER pid=%d START writers=%d readers=%d records=%d "
                       "ops=%lu write_us=%ld read_us=%ld",
-                      (int)getpid(), WRITER_COUNT, READER_COUNT,
+                      (int)getpid(), options->writers, options->readers,
                       TABLE_SIZE, options->operations, options->write_us,
                       options->read_us);
         }

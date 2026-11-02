@@ -13,6 +13,8 @@ enum {
 };
 
 typedef struct {
+    int writers;
+    int readers;
     unsigned long operations;
     long write_us;
     long read_us;

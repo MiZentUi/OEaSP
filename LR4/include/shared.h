@@ -8,8 +8,6 @@
 
 #define TABLE_SIZE 100
 #define MAX_PARTICIPANTS 32
-#define WRITER_COUNT 1
-#define READER_COUNT 1
 #define SHARED_MAGIC 0x4c523400u
 
 typedef enum {
