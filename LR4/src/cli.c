@@ -22,6 +22,7 @@
 #define DEFAULT_READERS 2
 #define DEFAULT_WRITE_US 100L
 #define DEFAULT_READ_US 100L
+#define DEFAULT_TIMEOUT_MS 5000
 #define DEFAULT_SEED 12345
 
 enum {
@@ -30,6 +31,7 @@ enum {
     OPT_OPERATIONS,
     OPT_WRITE_US,
     OPT_READ_US,
+    OPT_TIMEOUT_MS,
     OPT_QUIET
 };
 
@@ -47,10 +49,11 @@ static void usage_to(FILE *stream, const char *program)
             "  --operations N       operations per process (default %d)\n"
             "  --write-us N         write duration in microseconds (default %ld)\n"
             "  --read-us N          read duration in microseconds (default %ld)\n"
+            "  --timeout-ms N       access timeout (default %d)\n"
             "  --quiet              disable the event journal\n"
             "  --help               show this help\n",
             program, DEFAULT_WRITERS, DEFAULT_READERS, BASE_OPERATIONS,
-            DEFAULT_WRITE_US, DEFAULT_READ_US);
+            DEFAULT_WRITE_US, DEFAULT_READ_US, DEFAULT_TIMEOUT_MS);
 }
 
 void cli_usage(void)
@@ -87,6 +90,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         {"operations", required_argument, NULL, OPT_OPERATIONS},
         {"write-us", required_argument, NULL, OPT_WRITE_US},
         {"read-us", required_argument, NULL, OPT_READ_US},
+        {"timeout-ms", required_argument, NULL, OPT_TIMEOUT_MS},
         {"quiet", no_argument, NULL, OPT_QUIET},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0}
@@ -97,6 +101,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     options->operations = BASE_OPERATIONS;
     options->write_us = DEFAULT_WRITE_US;
     options->read_us = DEFAULT_READ_US;
+    options->timeout_ms = DEFAULT_TIMEOUT_MS;
     options->seed = DEFAULT_SEED;
     options->quiet = false;
 
@@ -137,6 +142,12 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
                 return CLI_ERROR;
             }
             options->read_us = value;
+            break;
+        case OPT_TIMEOUT_MS:
+            if (parse_long("timeout-ms", optarg, 1, 3600000, &value) < 0) {
+                return CLI_ERROR;
+            }
+            options->timeout_ms = (int)value;
             break;
         case OPT_QUIET:
             options->quiet = true;
@@ -199,6 +210,7 @@ static bool lock_journal(void)
 
     rc = pthread_mutex_lock(&g_state->journal_mutex);
     if (rc == EOWNERDEAD) {
+        atomic_fetch_add(&g_state->invariant_errors, 1);
         if (pthread_mutex_consistent(&g_state->journal_mutex) != 0) {
             pthread_mutex_unlock(&g_state->journal_mutex);
             return false;
@@ -280,12 +292,14 @@ void cli_error(const char *format, ...)
 }
 
 void cli_report(const cli_options_t *options, const shared_state_t *state,
-                bool table_consistent, int child_failures)
+                int child_failures)
 {
     uint64_t elapsed_ns;
     uint64_t total_operations = 0;
+    uint64_t total_timeouts = 0;
     uint64_t total_records = 0;
     uint64_t expected_operations;
+    unsigned int violations;
     int participants = options->writers + options->readers;
     int index;
 
@@ -306,6 +320,7 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
         const worker_stats_t *stats = &state->stats[index];
 
         total_operations += stats->operations;
+        total_timeouts += stats->timeouts;
         total_records += stats->records;
     }
     expected_operations = options->operations * (uint64_t)participants;
@@ -315,37 +330,42 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
     printf("writers=%d readers=%d records=%u operations=%lu\n",
            options->writers, options->readers, state->table_size,
            options->operations);
-    printf("%-7s %-3s %-7s %-10s %-12s %-12s %-10s\n",
-           "ROLE", "ID", "PID", "OPS", "AVG_WAIT_MS", "MAX_WAIT_MS",
-           "RECORDS");
+    printf("%-7s %-3s %-7s %-10s %-10s %-12s %-12s %-10s\n",
+           "ROLE", "ID", "PID", "OPS", "TIMEOUTS", "AVG_WAIT_MS",
+           "MAX_WAIT_MS", "RECORDS");
 
     for (index = 0; index < participants; ++index) {
         const worker_stats_t *stats = &state->stats[index];
-        double average_wait = stats->operations == 0
+        uint64_t attempts = stats->operations + stats->timeouts;
+        double average_wait = attempts == 0
                                   ? 0.0
                                   : (double)stats->wait_ns /
-                                        (double)stats->operations / 1000000.0;
+                                        (double)attempts / 1000000.0;
 
-        printf("%-7s %-3d %-7d %-10" PRIu64 " %-12.3f %-12.3f %-10" PRIu64
-               "\n",
+        printf("%-7s %-3d %-7d %-10" PRIu64 " %-10" PRIu64
+               " %-12.3f %-12.3f %-10" PRIu64 "\n",
                stats->role == ROLE_WRITER ? "WRITER" : "READER",
-               stats->index, stats->pid, stats->operations, average_wait,
+               stats->index, stats->pid, stats->operations,
+               stats->timeouts, average_wait,
                (double)stats->max_wait_ns / 1000000.0, stats->records);
     }
 
+    violations = atomic_load(&state->invariant_errors);
     printf("elapsed_ms=%.3f throughput_ops_s=%.3f\n",
            (double)elapsed_ns / 1000000.0,
            elapsed_ns == 0 ? 0.0
                            : (double)total_operations /
                                  ((double)elapsed_ns / 1000000000.0));
-    printf("operations=%" PRIu64 "/%" PRIu64 " records=%" PRIu64 "\n",
-           total_operations, expected_operations, total_records);
+    printf("operations=%" PRIu64 "/%" PRIu64 " timeouts=%" PRIu64
+           " records=%" PRIu64 "\n",
+           total_operations, expected_operations, total_timeouts,
+           total_records);
     printf("peak_readers=%d peak_writers=%d generation=%u\n",
            atomic_load(&state->peak_readers),
            atomic_load(&state->peak_writers), state->generation);
-    printf("table=%s child_failures=%d\n",
-           table_consistent ? "consistent" : "inconsistent", child_failures);
+    printf("invariant_violations=%u child_failures=%d\n",
+           violations, child_failures);
     printf("RESULT: %s\n",
-           table_consistent && child_failures == 0 ? "OK" : "FAILED");
+           child_failures == 0 && violations == 0 ? "OK" : "FAILED");
     fflush(stdout);
 }

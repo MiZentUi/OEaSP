@@ -4,9 +4,9 @@
 
 #include "timing.h"
 
-static int wait_semaphore(sem_t *semaphore)
+static int wait_semaphore(sem_t *semaphore, const struct timespec *deadline)
 {
-    while (sem_wait(semaphore) < 0) {
+    while (sem_timedwait(semaphore, deadline) < 0) {
         if (errno == EINTR) {
             continue;
         }
@@ -15,7 +15,7 @@ static int wait_semaphore(sem_t *semaphore)
     return 0;
 }
 
-static int recover_owner(pthread_mutex_t *mutex, int rc)
+static int recover_owner(pthread_mutex_t *mutex, shared_state_t *state, int rc)
 {
     int recover;
 
@@ -23,6 +23,7 @@ static int recover_owner(pthread_mutex_t *mutex, int rc)
         return rc;
     }
 
+    atomic_fetch_add(&state->invariant_errors, 1);
     recover = pthread_mutex_consistent(mutex);
     if (recover != 0) {
         pthread_mutex_unlock(mutex);
@@ -31,7 +32,19 @@ static int recover_owner(pthread_mutex_t *mutex, int rc)
     return 0;
 }
 
-static int lock_mutex(pthread_mutex_t *mutex)
+static int lock_mutex_timed(pthread_mutex_t *mutex, shared_state_t *state,
+                            const struct timespec *deadline)
+{
+    int rc;
+
+    do {
+        rc = pthread_mutex_timedlock(mutex, deadline);
+    } while (rc == EINTR);
+
+    return recover_owner(mutex, state, rc);
+}
+
+static int lock_mutex(pthread_mutex_t *mutex, shared_state_t *state)
 {
     int rc;
 
@@ -39,7 +52,12 @@ static int lock_mutex(pthread_mutex_t *mutex)
         rc = pthread_mutex_lock(mutex);
     } while (rc == EINTR);
 
-    return recover_owner(mutex, rc);
+    return recover_owner(mutex, state, rc);
+}
+
+static void note_violation(shared_state_t *state)
+{
+    atomic_fetch_add(&state->invariant_errors, 1);
 }
 
 static void update_reader_peak(shared_state_t *state)
@@ -62,17 +80,21 @@ static void update_writer_peak(shared_state_t *state)
     }
 }
 
-int rwlock_reader_enter(shared_state_t *state, uint64_t *wait_ns)
+int rwlock_reader_enter(shared_state_t *state, int timeout_ms,
+                        uint64_t *wait_ns)
 {
+    struct timespec deadline;
     uint64_t start = timing_now_ns();
     int rc;
 
-    rc = wait_semaphore(&state->turnstile);
+    timing_deadline_ms(timeout_ms, &deadline);
+
+    rc = wait_semaphore(&state->turnstile, &deadline);
     if (rc != 0) {
         goto done;
     }
 
-    rc = lock_mutex(&state->readers_mutex);
+    rc = lock_mutex_timed(&state->readers_mutex, state, &deadline);
     if (rc != 0) {
         sem_post(&state->turnstile);
         goto done;
@@ -81,7 +103,7 @@ int rwlock_reader_enter(shared_state_t *state, uint64_t *wait_ns)
     state->readers_count++;
     if (state->readers_count == 1) {
         // the first reader holds the gate for the whole read group
-        rc = wait_semaphore(&state->access_gate);
+        rc = wait_semaphore(&state->access_gate, &deadline);
         if (rc != 0) {
             state->readers_count--;
             pthread_mutex_unlock(&state->readers_mutex);
@@ -92,6 +114,10 @@ int rwlock_reader_enter(shared_state_t *state, uint64_t *wait_ns)
 
     atomic_fetch_add(&state->active_readers, 1);
     update_reader_peak(state);
+
+    if (atomic_load(&state->active_writers) != 0) {
+        note_violation(state);
+    }
 
     pthread_mutex_unlock(&state->readers_mutex);
     sem_post(&state->turnstile);
@@ -107,14 +133,23 @@ done:
 int rwlock_reader_leave(shared_state_t *state)
 {
     int rc;
+    int previous;
 
-    rc = lock_mutex(&state->readers_mutex);
+    rc = lock_mutex(&state->readers_mutex, state);
     if (rc != 0) {
         return rc;
     }
 
     state->readers_count--;
-    atomic_fetch_sub(&state->active_readers, 1);
+    if (state->readers_count < 0) {
+        note_violation(state);
+        state->readers_count = 0;
+    }
+
+    previous = atomic_fetch_sub(&state->active_readers, 1);
+    if (previous <= 0) {
+        note_violation(state);
+    }
 
     if (state->readers_count == 0 && sem_post(&state->access_gate) < 0) {
         rc = errno;
@@ -124,18 +159,23 @@ int rwlock_reader_leave(shared_state_t *state)
     return rc;
 }
 
-int rwlock_writer_enter(shared_state_t *state, uint64_t *wait_ns)
+int rwlock_writer_enter(shared_state_t *state, int timeout_ms,
+                        uint64_t *wait_ns)
 {
+    struct timespec deadline;
     uint64_t start = timing_now_ns();
     int rc;
+    int previous;
 
-    rc = wait_semaphore(&state->turnstile);
+    timing_deadline_ms(timeout_ms, &deadline);
+
+    rc = wait_semaphore(&state->turnstile, &deadline);
     if (rc != 0) {
         goto done;
     }
 
     // a waiting writer closes the turnstile for new readers
-    rc = wait_semaphore(&state->access_gate);
+    rc = wait_semaphore(&state->access_gate, &deadline);
     if (rc != 0) {
         sem_post(&state->turnstile);
         goto done;
@@ -143,9 +183,16 @@ int rwlock_writer_enter(shared_state_t *state, uint64_t *wait_ns)
 
     sem_post(&state->turnstile);
 
-    atomic_fetch_add(&state->active_writers, 1);
+    if (atomic_load(&state->active_readers) != 0) {
+        note_violation(state);
+    }
+
+    // only one writer can own the access gate
+    previous = atomic_fetch_add(&state->active_writers, 1);
+    if (previous != 0) {
+        note_violation(state);
+    }
     update_writer_peak(state);
-    rc = 0;
 
 done:
     if (wait_ns != NULL) {
@@ -156,9 +203,12 @@ done:
 
 int rwlock_writer_leave(shared_state_t *state)
 {
+    int previous = atomic_fetch_sub(&state->active_writers, 1);
     int rc = 0;
 
-    atomic_fetch_sub(&state->active_writers, 1);
+    if (previous != 1) {
+        note_violation(state);
+    }
 
     if (sem_post(&state->access_gate) < 0) {
         rc = errno;

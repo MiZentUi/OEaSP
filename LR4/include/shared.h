@@ -27,6 +27,7 @@ typedef struct {
     int index;
     int pid;
     uint64_t operations;
+    uint64_t timeouts;
     uint64_t wait_ns;
     uint64_t max_wait_ns;
     uint64_t records;
@@ -49,6 +50,7 @@ typedef struct shared_state {
     atomic_int active_writers;
     atomic_int peak_readers;
     atomic_int peak_writers;
+    atomic_uint invariant_errors;
 
     struct timespec start_time;
     worker_stats_t stats[MAX_PARTICIPANTS];

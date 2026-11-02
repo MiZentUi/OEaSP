@@ -132,6 +132,7 @@ int shared_state_init(shared_state_t *state)
     atomic_init(&state->active_writers, 0);
     atomic_init(&state->peak_readers, 0);
     atomic_init(&state->peak_writers, 0);
+    atomic_init(&state->invariant_errors, 0);
 
     rc = init_mutex(&state->readers_mutex);
     if (rc != 0) {

@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -73,21 +74,56 @@ static void terminate_children(pid_t *pids, bool *done, int count)
     }
 }
 
-static bool table_is_consistent(shared_state_t *state)
+static void verify_final(shared_state_t *state)
 {
-    bool consistent = true;
+    int gate_value = 0;
+    unsigned int errors = 0;
 
     if (state->magic != SHARED_MAGIC) {
-        cli_error("ERROR shared magic is invalid");
-        consistent = false;
+        cli_error("ERROR invariant shared magic is invalid");
+        errors++;
     }
 
     if (model_check(state) != 0) {
-        cli_error("ERROR table is inconsistent");
-        consistent = false;
+        cli_error("ERROR invariant table is inconsistent");
+        errors++;
     }
 
-    return consistent;
+    if (atomic_load(&state->active_readers) != 0) {
+        cli_error("ERROR invariant active_readers=%d",
+                  atomic_load(&state->active_readers));
+        errors++;
+    }
+
+    if (atomic_load(&state->active_writers) != 0) {
+        cli_error("ERROR invariant active_writers=%d",
+                  atomic_load(&state->active_writers));
+        errors++;
+    }
+
+    if (state->readers_count != 0) {
+        cli_error("ERROR invariant readers_count=%d", state->readers_count);
+        errors++;
+    }
+
+    if (sem_getvalue(&state->access_gate, &gate_value) < 0) {
+        cli_error("ERROR invariant access_gate status failed: %s",
+                  strerror(errno));
+        errors++;
+    } else if (gate_value != 1) {
+        cli_error("ERROR invariant access_gate value=%d", gate_value);
+        errors++;
+    }
+
+    if (atomic_load(&state->peak_writers) > 1) {
+        cli_error("ERROR invariant peak_writers=%d",
+                  atomic_load(&state->peak_writers));
+        errors++;
+    }
+
+    if (errors > 0) {
+        atomic_fetch_add(&state->invariant_errors, errors);
+    }
 }
 
 int manager_run(const cli_options_t *options)
@@ -101,7 +137,6 @@ int manager_run(const cli_options_t *options)
     int child_failures = 0;
     bool initialized = false;
     bool launch_failed = false;
-    bool table_consistent = false;
     int result = 1;
     int index;
 
@@ -210,9 +245,12 @@ int manager_run(const cli_options_t *options)
         }
     }
 
-    table_consistent = table_is_consistent(state);
-    cli_report(options, state, table_consistent, child_failures);
-    result = !launch_failed && table_consistent && child_failures == 0 ? 0 : 1;
+    verify_final(state);
+    cli_report(options, state, child_failures);
+    result = !launch_failed && child_failures == 0 &&
+                     atomic_load(&state->invariant_errors) == 0
+                 ? 0
+                 : 1;
 
 cleanup:
     cli_bind(NULL, false);

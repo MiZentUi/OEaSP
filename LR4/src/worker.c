@@ -21,6 +21,14 @@ static const char *access_name(worker_role_t role)
     return role == ROLE_WRITER ? "WRITE" : "READ";
 }
 
+static void note_invariant(shared_state_t *state, worker_role_t role,
+                           int index, const char *description)
+{
+    atomic_fetch_add(&state->invariant_errors, 1);
+    cli_error("%s %d pid=%d INVARIANT %s", role_name(role), index,
+              (int)getpid(), description);
+}
+
 static long operation_duration(long base_us, uint32_t *random_state)
 {
     long delta;
@@ -76,9 +84,9 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
                   (int)getpid(), access, operation);
 
         if (role == ROLE_WRITER) {
-            rc = rwlock_writer_enter(state, &wait_ns);
+            rc = rwlock_writer_enter(state, options->timeout_ms, &wait_ns);
         } else {
-            rc = rwlock_reader_enter(state, &wait_ns);
+            rc = rwlock_reader_enter(state, options->timeout_ms, &wait_ns);
         }
 
         stats->wait_ns += wait_ns;
@@ -86,6 +94,13 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
             stats->max_wait_ns = wait_ns;
         }
 
+        if (rc == ETIMEDOUT) {
+            stats->timeouts++;
+            cli_event("%s %d pid=%d TIMEOUT ACCESS=%s op=%lu wait_ms=%.3f",
+                      name, index, (int)getpid(), access, operation,
+                      (double)wait_ns / 1000000.0);
+            continue;
+        }
         if (rc != 0) {
             cli_error("ERROR %s %d pid=%d access=%s op=%lu error=%s", name,
                       index, (int)getpid(), access, operation, strerror(rc));
@@ -96,6 +111,9 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
             cli_event("%s %d pid=%d ACQUIRED ACCESS=WRITE op=%lu", name,
                       index, (int)getpid(), operation);
             model_write(state);
+            if (atomic_load(&state->active_readers) != 0) {
+                note_invariant(state, role, index, "reader active during write");
+            }
             stats->records += TABLE_SIZE;
             cli_event("%s %d pid=%d WRITING generation=%u records=%d", name,
                       index, (int)getpid(), state->generation, TABLE_SIZE);
@@ -103,6 +121,12 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
             cli_event("%s %d pid=%d ACQUIRED ACCESS=READ op=%lu readers=%d",
                       name, index, (int)getpid(), operation,
                       atomic_load(&state->active_readers));
+            if (model_check(state) != 0) {
+                note_invariant(state, role, index, "inconsistent table");
+            }
+            if (atomic_load(&state->active_writers) != 0) {
+                note_invariant(state, role, index, "writer active during read");
+            }
             stats->records += TABLE_SIZE;
             cli_event("%s %d pid=%d READING generation=%u records=%d", name,
                       index, (int)getpid(), state->generation, TABLE_SIZE);
@@ -134,7 +158,8 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
                   (double)wait_ns / 1000000.0);
     }
 
-    cli_event("%s %d pid=%d FINISHED ops=%" PRIu64, name, index,
-              (int)getpid(), stats->operations);
+    cli_event("%s %d pid=%d FINISHED ops=%" PRIu64 " timeouts=%" PRIu64,
+              name, index, (int)getpid(), stats->operations,
+              stats->timeouts);
     return 0;
 }
