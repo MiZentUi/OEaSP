@@ -53,17 +53,22 @@ static void child_main(const char *name, const cli_options_t *options,
     _exit(rc == 0 ? 0 : 1);
 }
 
-static void terminate_children(pid_t *pids, int count)
+static void terminate_children(pid_t *pids, bool *done, int count)
 {
     int index;
     int status;
 
     for (index = 0; index < count; ++index) {
-        (void)kill(pids[index], SIGTERM);
+        if (!done[index]) {
+            (void)kill(pids[index], SIGTERM);
+        }
     }
 
     for (index = 0; index < count; ++index) {
-        while (waitpid(pids[index], &status, 0) < 0 && errno == EINTR) {
+        if (!done[index]) {
+            while (waitpid(pids[index], &status, 0) < 0 && errno == EINTR) {
+            }
+            done[index] = true;
         }
     }
 }
@@ -73,12 +78,12 @@ static bool table_is_consistent(shared_state_t *state)
     bool consistent = true;
 
     if (state->magic != SHARED_MAGIC) {
-        cli_error("ERROR invariant shared magic is invalid");
+        cli_error("ERROR shared magic is invalid");
         consistent = false;
     }
 
     if (model_check(state) != 0) {
-        cli_error("ERROR invariant table is inconsistent");
+        cli_error("ERROR table is inconsistent");
         consistent = false;
     }
 
@@ -90,6 +95,7 @@ int manager_run(const cli_options_t *options)
     char name[64] = "";
     shared_state_t *state = NULL;
     pid_t pids[MAX_PARTICIPANTS];
+    bool done[MAX_PARTICIPANTS];
     int participants = options->writers + options->readers;
     int started = 0;
     int child_failures = 0;
@@ -100,6 +106,7 @@ int manager_run(const cli_options_t *options)
     int index;
 
     memset(pids, 0, sizeof(pids));
+    memset(done, 0, sizeof(done));
 
     if (participants < 1 || participants > MAX_PARTICIPANTS) {
         cli_error("ERROR invalid participant count: %d", participants);
@@ -173,7 +180,7 @@ int manager_run(const cli_options_t *options)
     }
 
     if (launch_failed) {
-        terminate_children(pids, started);
+        terminate_children(pids, done, started);
         child_failures += participants - started;
     } else {
         for (index = 0; index < participants; ++index) {
@@ -205,7 +212,7 @@ int manager_run(const cli_options_t *options)
 
     table_consistent = table_is_consistent(state);
     cli_report(options, state, table_consistent, child_failures);
-    result = table_consistent && child_failures == 0 && !launch_failed ? 0 : 1;
+    result = !launch_failed && table_consistent && child_failures == 0 ? 0 : 1;
 
 cleanup:
     cli_bind(NULL, false);

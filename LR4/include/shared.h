@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <semaphore.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <time.h>
 
@@ -37,9 +38,17 @@ typedef struct shared_state {
     uint32_t generation;
     record_t table[TABLE_SIZE];
 
-    pthread_mutex_t table_mutex;
+    pthread_mutex_t readers_mutex;
     pthread_mutex_t journal_mutex;
+    sem_t turnstile;
+    sem_t access_gate;
     sem_t start_gate;
+    int readers_count;
+
+    atomic_int active_readers;
+    atomic_int active_writers;
+    atomic_int peak_readers;
+    atomic_int peak_writers;
 
     struct timespec start_time;
     worker_stats_t stats[MAX_PARTICIPANTS];

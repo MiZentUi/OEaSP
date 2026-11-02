@@ -3,7 +3,9 @@
 #include <errno.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdarg.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,9 +14,12 @@
 
 #include "timing.h"
 
+#ifndef BASE_OPERATIONS
+#define BASE_OPERATIONS 20
+#endif
+
 #define DEFAULT_WRITERS 2
 #define DEFAULT_READERS 2
-#define DEFAULT_OPERATIONS 20
 #define DEFAULT_WRITE_US 100L
 #define DEFAULT_READ_US 100L
 #define DEFAULT_SEED 12345
@@ -44,7 +49,7 @@ static void usage_to(FILE *stream, const char *program)
             "  --read-us N          read duration in microseconds (default %ld)\n"
             "  --quiet              disable the event journal\n"
             "  --help               show this help\n",
-            program, DEFAULT_WRITERS, DEFAULT_READERS, DEFAULT_OPERATIONS,
+            program, DEFAULT_WRITERS, DEFAULT_READERS, BASE_OPERATIONS,
             DEFAULT_WRITE_US, DEFAULT_READ_US);
 }
 
@@ -89,7 +94,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
 
     options->writers = DEFAULT_WRITERS;
     options->readers = DEFAULT_READERS;
-    options->operations = DEFAULT_OPERATIONS;
+    options->operations = BASE_OPERATIONS;
     options->write_us = DEFAULT_WRITE_US;
     options->read_us = DEFAULT_READ_US;
     options->seed = DEFAULT_SEED;
@@ -277,7 +282,7 @@ void cli_error(const char *format, ...)
 void cli_report(const cli_options_t *options, const shared_state_t *state,
                 bool table_consistent, int child_failures)
 {
-    uint64_t elapsed_ns = 0;
+    uint64_t elapsed_ns;
     uint64_t total_operations = 0;
     uint64_t total_records = 0;
     uint64_t expected_operations;
@@ -292,6 +297,8 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
             clock_gettime(CLOCK_MONOTONIC, &now) == 0 &&
             now.tv_sec >= state->start_time.tv_sec) {
             elapsed_ns = timing_diff_ns(&state->start_time, &now);
+        } else {
+            elapsed_ns = 0;
         }
     }
 
@@ -304,12 +311,13 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
     expected_operations = options->operations * (uint64_t)participants;
 
     printf("\n");
-    printf("=== LR4 writers-readers: single mutex ===\n");
+    printf("=== LR4 interprocess writers-readers ===\n");
     printf("writers=%d readers=%d records=%u operations=%lu\n",
            options->writers, options->readers, state->table_size,
            options->operations);
-    printf("%-7s %-3s %-7s %-10s %-12s %-12s %-10s\n", "ROLE", "ID", "PID",
-           "OPS", "AVG_WAIT_MS", "MAX_WAIT_MS", "RECORDS");
+    printf("%-7s %-3s %-7s %-10s %-12s %-12s %-10s\n",
+           "ROLE", "ID", "PID", "OPS", "AVG_WAIT_MS", "MAX_WAIT_MS",
+           "RECORDS");
 
     for (index = 0; index < participants; ++index) {
         const worker_stats_t *stats = &state->stats[index];
@@ -330,10 +338,11 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
            elapsed_ns == 0 ? 0.0
                            : (double)total_operations /
                                  ((double)elapsed_ns / 1000000000.0));
-    printf("operations=%" PRIu64 "/%" PRIu64 " records=%" PRIu64
-           " generation=%u\n",
-           total_operations, expected_operations, total_records,
-           state->generation);
+    printf("operations=%" PRIu64 "/%" PRIu64 " records=%" PRIu64 "\n",
+           total_operations, expected_operations, total_records);
+    printf("peak_readers=%d peak_writers=%d generation=%u\n",
+           atomic_load(&state->peak_readers),
+           atomic_load(&state->peak_writers), state->generation);
     printf("table=%s child_failures=%d\n",
            table_consistent ? "consistent" : "inconsistent", child_failures);
     printf("RESULT: %s\n",

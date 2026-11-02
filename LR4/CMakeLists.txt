@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 set(STUDENT_ID "103" CACHE STRING "Student ID")
+set(BASE_OPERATIONS "20" CACHE STRING "Base operations for the standard run")
 
 find_package(Threads REQUIRED)
 
@@ -23,6 +24,7 @@ add_executable(lr4
 target_include_directories(lr4 PRIVATE include)
 target_compile_definitions(lr4 PRIVATE
     STUDENT_ID=${STUDENT_ID}
+    BASE_OPERATIONS=${BASE_OPERATIONS}
     _POSIX_C_SOURCE=200809L
     _DEFAULT_SOURCE
 )

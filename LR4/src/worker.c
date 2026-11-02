@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -67,19 +68,19 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
               (int)getpid(), TABLE_SIZE);
 
     for (operation = 1; operation <= options->operations; ++operation) {
-        uint64_t wait_ns;
+        uint64_t wait_ns = 0;
         long duration_us;
         int rc;
 
         cli_event("%s %d pid=%d WAITING ACCESS=%s op=%lu", name, index,
                   (int)getpid(), access, operation);
 
-        {
-            uint64_t wait_start = timing_now_ns();
-
-            rc = table_enter(state);
-            wait_ns = timing_now_ns() - wait_start;
+        if (role == ROLE_WRITER) {
+            rc = rwlock_writer_enter(state, &wait_ns);
+        } else {
+            rc = rwlock_reader_enter(state, &wait_ns);
         }
+
         stats->wait_ns += wait_ns;
         if (wait_ns > stats->max_wait_ns) {
             stats->max_wait_ns = wait_ns;
@@ -99,14 +100,9 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
             cli_event("%s %d pid=%d WRITING generation=%u records=%d", name,
                       index, (int)getpid(), state->generation, TABLE_SIZE);
         } else {
-            cli_event("%s %d pid=%d ACQUIRED ACCESS=READ op=%lu", name,
-                      index, (int)getpid(), operation);
-            if (model_check(state) != 0) {
-                cli_error("ERROR %s %d pid=%d inconsistent table", name,
-                          index, (int)getpid());
-                table_leave(state);
-                return 1;
-            }
+            cli_event("%s %d pid=%d ACQUIRED ACCESS=READ op=%lu readers=%d",
+                      name, index, (int)getpid(), operation,
+                      atomic_load(&state->active_readers));
             stats->records += TABLE_SIZE;
             cli_event("%s %d pid=%d READING generation=%u records=%d", name,
                       index, (int)getpid(), state->generation, TABLE_SIZE);
@@ -121,7 +117,11 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
         // this delay models the operation time, synchronization is separate
         timing_sleep_us(duration_us);
 
-        rc = table_leave(state);
+        if (role == ROLE_WRITER) {
+            rc = rwlock_writer_leave(state);
+        } else {
+            rc = rwlock_reader_leave(state);
+        }
         if (rc != 0) {
             cli_error("ERROR %s %d pid=%d release=%s op=%lu error=%s", name,
                       index, (int)getpid(), access, operation, strerror(rc));
@@ -129,8 +129,9 @@ int worker_run(shared_state_t *state, const cli_options_t *options,
         }
 
         stats->operations++;
-        cli_event("%s %d pid=%d RELEASED ACCESS=%s op=%lu", name, index,
-                  (int)getpid(), access, operation);
+        cli_event("%s %d pid=%d RELEASED ACCESS=%s op=%lu wait_ms=%.3f",
+                  name, index, (int)getpid(), access, operation,
+                  (double)wait_ns / 1000000.0);
     }
 
     cli_event("%s %d pid=%d FINISHED ops=%" PRIu64, name, index,

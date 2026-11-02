@@ -128,7 +128,12 @@ int shared_state_init(shared_state_t *state)
     memset(state, 0, sizeof(*state));
     state->table_size = TABLE_SIZE;
 
-    rc = init_mutex(&state->table_mutex);
+    atomic_init(&state->active_readers, 0);
+    atomic_init(&state->active_writers, 0);
+    atomic_init(&state->peak_readers, 0);
+    atomic_init(&state->peak_writers, 0);
+
+    rc = init_mutex(&state->readers_mutex);
     if (rc != 0) {
         errno = rc;
         return -1;
@@ -136,14 +141,29 @@ int shared_state_init(shared_state_t *state)
 
     rc = init_mutex(&state->journal_mutex);
     if (rc != 0) {
-        pthread_mutex_destroy(&state->table_mutex);
+        pthread_mutex_destroy(&state->readers_mutex);
         errno = rc;
         return -1;
     }
 
-    if (sem_init(&state->start_gate, 1, 0) < 0) {
+    if (sem_init(&state->turnstile, 1, 1) < 0) {
         pthread_mutex_destroy(&state->journal_mutex);
-        pthread_mutex_destroy(&state->table_mutex);
+        pthread_mutex_destroy(&state->readers_mutex);
+        return -1;
+    }
+
+    if (sem_init(&state->access_gate, 1, 1) < 0) {
+        sem_destroy(&state->turnstile);
+        pthread_mutex_destroy(&state->journal_mutex);
+        pthread_mutex_destroy(&state->readers_mutex);
+        return -1;
+    }
+
+    if (sem_init(&state->start_gate, 1, 0) < 0) {
+        sem_destroy(&state->access_gate);
+        sem_destroy(&state->turnstile);
+        pthread_mutex_destroy(&state->journal_mutex);
+        pthread_mutex_destroy(&state->readers_mutex);
         return -1;
     }
 
@@ -158,6 +178,8 @@ void shared_state_destroy(shared_state_t *state)
     }
 
     sem_destroy(&state->start_gate);
+    sem_destroy(&state->access_gate);
+    sem_destroy(&state->turnstile);
     pthread_mutex_destroy(&state->journal_mutex);
-    pthread_mutex_destroy(&state->table_mutex);
+    pthread_mutex_destroy(&state->readers_mutex);
 }
