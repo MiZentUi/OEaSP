@@ -14,6 +14,10 @@
 
 #include "timing.h"
 
+#ifndef STUDENT_ID
+#define STUDENT_ID 103
+#endif
+
 #ifndef BASE_OPERATIONS
 #define BASE_OPERATIONS 20
 #endif
@@ -24,7 +28,9 @@
 #define DEFAULT_READ_US 100L
 #define DEFAULT_TIMEOUT_MS 5000
 #define DEFAULT_DURATION_MS 60000
-#define DEFAULT_SEED 12345
+#define DEFAULT_SEED 1
+#define STUDENT_SEED (1000 + STUDENT_ID * 97)
+#define INDIVIDUAL_OPERATIONS (BASE_OPERATIONS + STUDENT_ID * 5)
 
 enum {
     OPT_WRITERS = 1000,
@@ -34,6 +40,8 @@ enum {
     OPT_READ_US,
     OPT_TIMEOUT_MS,
     OPT_DURATION_MS,
+    OPT_SEED,
+    OPT_INDIVIDUAL,
     OPT_QUIET
 };
 
@@ -53,11 +61,13 @@ static void usage_to(FILE *stream, const char *program)
             "  --read-us N          read duration in microseconds (default %ld)\n"
             "  --timeout-ms N       access timeout (default %d)\n"
             "  --max-duration-ms N  experiment limit (default %d)\n"
+            "  --seed N             random seed (default %d)\n"
+            "  --individual         use STUDENT_ID seed and operation count\n"
             "  --quiet              disable the event journal\n"
             "  --help               show this help\n",
             program, DEFAULT_WRITERS, DEFAULT_READERS, BASE_OPERATIONS,
             DEFAULT_WRITE_US, DEFAULT_READ_US, DEFAULT_TIMEOUT_MS,
-            DEFAULT_DURATION_MS);
+            DEFAULT_DURATION_MS, DEFAULT_SEED);
 }
 
 void cli_usage(void)
@@ -85,6 +95,8 @@ static int parse_long(const char *name, const char *text, long minimum,
 
 int cli_parse(int argc, char **argv, cli_options_t *options)
 {
+    bool operations_set = false;
+    bool seed_set = false;
     int option;
     int option_index = 0;
 
@@ -96,6 +108,8 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         {"read-us", required_argument, NULL, OPT_READ_US},
         {"timeout-ms", required_argument, NULL, OPT_TIMEOUT_MS},
         {"max-duration-ms", required_argument, NULL, OPT_DURATION_MS},
+        {"seed", required_argument, NULL, OPT_SEED},
+        {"individual", no_argument, NULL, OPT_INDIVIDUAL},
         {"quiet", no_argument, NULL, OPT_QUIET},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0}
@@ -110,6 +124,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
     options->max_duration_ms = DEFAULT_DURATION_MS;
     options->seed = DEFAULT_SEED;
     options->quiet = false;
+    options->individual = false;
 
     opterr = 0;
     while ((option = getopt_long(argc, argv, "h", long_options,
@@ -136,6 +151,7 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
                 return CLI_ERROR;
             }
             options->operations = (unsigned long)value;
+            operations_set = true;
             break;
         case OPT_WRITE_US:
             if (parse_long("write-us", optarg, 0, 10000000, &value) < 0) {
@@ -162,6 +178,16 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
             }
             options->max_duration_ms = (int)value;
             break;
+        case OPT_SEED:
+            if (parse_long("seed", optarg, 0, (long)UINT32_MAX, &value) < 0) {
+                return CLI_ERROR;
+            }
+            options->seed = (unsigned int)value;
+            seed_set = true;
+            break;
+        case OPT_INDIVIDUAL:
+            options->individual = true;
+            break;
         case OPT_QUIET:
             options->quiet = true;
             break;
@@ -179,6 +205,13 @@ int cli_parse(int argc, char **argv, cli_options_t *options)
         cli_error("ERROR unexpected argument: %s", argv[optind]);
         usage_to(stderr, argv[0]);
         return CLI_ERROR;
+    }
+
+    if (options->individual && !operations_set) {
+        options->operations = INDIVIDUAL_OPERATIONS;
+    }
+    if (options->individual && !seed_set) {
+        options->seed = STUDENT_SEED;
     }
 
     if (options->writers + options->readers > MAX_PARTICIPANTS) {
@@ -340,9 +373,10 @@ void cli_report(const cli_options_t *options, const shared_state_t *state,
 
     printf("\n");
     printf("=== LR4 interprocess writers-readers ===\n");
-    printf("writers=%d readers=%d records=%u operations=%lu\n",
+    printf("mode=%s writers=%d readers=%d records=%u operations=%lu seed=%u\n",
+           options->individual ? "individual" : "standard",
            options->writers, options->readers, state->table_size,
-           options->operations);
+           options->operations, options->seed);
     printf("%-7s %-3s %-7s %-10s %-10s %-12s %-12s %-10s\n",
            "ROLE", "ID", "PID", "OPS", "TIMEOUTS", "AVG_WAIT_MS",
            "MAX_WAIT_MS", "RECORDS");

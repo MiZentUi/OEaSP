@@ -22,6 +22,7 @@ typedef struct {
     int max_duration_ms;
     unsigned int seed;
     bool quiet;
+    bool individual;
 } cli_options_t;
 
 int cli_parse(int argc, char **argv, cli_options_t *options);
