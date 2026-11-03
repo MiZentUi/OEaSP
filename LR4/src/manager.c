@@ -19,6 +19,49 @@
 #define STUDENT_ID 103
 #endif
 
+#define ABORT_GRACE_MS 500
+#define SUPERVISOR_STEP_US 5000
+
+static volatile sig_atomic_t g_stop_requested;
+
+static void handle_signal(int signal_number)
+{
+    (void)signal_number;
+    g_stop_requested = 1;
+}
+
+static int install_signal_handlers(void)
+{
+    struct sigaction action;
+
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = handle_signal;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    if (sigaction(SIGINT, &action, NULL) < 0 ||
+        sigaction(SIGTERM, &action, NULL) < 0) {
+        return -1;
+    }
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+        return -1;
+    }
+    return 0;
+}
+
+static void reset_signal_handlers(void)
+{
+    struct sigaction action;
+
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = SIG_DFL;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = 0;
+
+    (void)sigaction(SIGINT, &action, NULL);
+    (void)sigaction(SIGTERM, &action, NULL);
+}
+
 static void make_shared_name(char *buffer, size_t size)
 {
     snprintf(buffer, size, "/ossp_lr4_%d_%ld_%llu", STUDENT_ID,
@@ -33,6 +76,7 @@ static void child_main(const char *name, const cli_options_t *options,
     shared_state_t *state = NULL;
     int rc;
 
+    reset_signal_handlers();
     cli_bind(NULL, false);
     // the child opens its own mapping instead of using the inherited address
     shared_detach(parent_state);
@@ -134,14 +178,20 @@ int manager_run(const cli_options_t *options)
     bool done[MAX_PARTICIPANTS];
     int participants = options->writers + options->readers;
     int started = 0;
+    int remaining = 0;
     int child_failures = 0;
     bool initialized = false;
-    bool launch_failed = false;
+    bool aborted = false;
+    bool term_sent = false;
+    bool kill_sent = false;
+    uint64_t experiment_start_ns = 0;
+    uint64_t abort_start_ns = 0;
     int result = 1;
     int index;
 
     memset(pids, 0, sizeof(pids));
     memset(done, 0, sizeof(done));
+    g_stop_requested = 0;
 
     if (participants < 1 || participants > MAX_PARTICIPANTS) {
         cli_error("ERROR invalid participant count: %d", participants);
@@ -161,6 +211,11 @@ int manager_run(const cli_options_t *options)
     initialized = true;
     model_init(state);
 
+    if (install_signal_handlers() < 0) {
+        cli_error("ERROR sigaction failed: %s", strerror(errno));
+        goto cleanup;
+    }
+
     cli_bind(state, options->quiet);
 
     for (index = 0; index < participants; ++index) {
@@ -179,7 +234,7 @@ int manager_run(const cli_options_t *options)
         pid = fork();
         if (pid < 0) {
             cli_error("ERROR fork failed: %s", strerror(errno));
-            launch_failed = true;
+            aborted = true;
             break;
         }
         if (pid == 0) {
@@ -190,11 +245,12 @@ int manager_run(const cli_options_t *options)
         started++;
     }
 
-    if (!launch_failed) {
+    if (!aborted && started == participants) {
         if (clock_gettime(CLOCK_MONOTONIC, &state->start_time) < 0) {
             cli_error("ERROR clock_gettime failed: %s", strerror(errno));
-            launch_failed = true;
+            aborted = true;
         } else {
+            experiment_start_ns = timing_now_ns();
             cli_event("MANAGER pid=%d START writers=%d readers=%d records=%d "
                       "ops=%lu write_us=%ld read_us=%ld",
                       (int)getpid(), options->writers, options->readers,
@@ -203,51 +259,113 @@ int manager_run(const cli_options_t *options)
         }
     }
 
-    if (!launch_failed) {
+    if (!aborted) {
         for (index = 0; index < participants; ++index) {
             if (sem_post(&state->start_gate) < 0) {
                 cli_error("ERROR start_gate post failed: %s",
                           strerror(errno));
-                launch_failed = true;
+                aborted = true;
                 break;
             }
         }
     }
 
-    if (launch_failed) {
-        terminate_children(pids, done, started);
-        child_failures += participants - started;
-    } else {
-        for (index = 0; index < participants; ++index) {
+    if (!aborted) {
+        remaining = participants;
+
+        while (remaining > 0) {
+            uint64_t now;
+            uint64_t elapsed_ms;
             int status;
             pid_t pid;
 
-            do {
-                pid = waitpid(pids[index], &status, 0);
-            } while (pid < 0 && errno == EINTR);
+            now = timing_now_ns();
+            elapsed_ms = experiment_start_ns == 0
+                             ? 0
+                             : (now - experiment_start_ns) / 1000000ULL;
 
-            if (pid < 0) {
-                cli_error("ERROR waitpid failed: %s", strerror(errno));
-                child_failures++;
+            if (!aborted &&
+                (g_stop_requested ||
+                 elapsed_ms > (uint64_t)options->max_duration_ms)) {
+                aborted = true;
+                abort_start_ns = now;
+                cli_event("MANAGER pid=%d ABORT cause=%s elapsed_ms=%llu",
+                          (int)getpid(),
+                          g_stop_requested ? "signal" : "timeout",
+                          (unsigned long long)elapsed_ms);
+            }
+
+            if (aborted && !term_sent) {
+                for (index = 0; index < participants; ++index) {
+                    if (!done[index]) {
+                        (void)kill(pids[index], SIGTERM);
+                    }
+                }
+                term_sent = true;
+            }
+
+            if (aborted && term_sent && !kill_sent &&
+                now - abort_start_ns > (uint64_t)ABORT_GRACE_MS * 1000000ULL) {
+                for (index = 0; index < participants; ++index) {
+                    if (!done[index]) {
+                        (void)kill(pids[index], SIGKILL);
+                    }
+                }
+                kill_sent = true;
+            }
+
+            pid = waitpid(-1, &status, WNOHANG);
+            if (pid > 0) {
+                for (index = 0; index < participants; ++index) {
+                    if (pids[index] == pid && !done[index]) {
+                        break;
+                    }
+                }
+
+                if (index == participants) {
+                    cli_error("ERROR unknown child pid=%ld", (long)pid);
+                    aborted = true;
+                    continue;
+                }
+
+                done[index] = true;
+                remaining--;
+
+                if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+                    child_failures++;
+                    if (WIFEXITED(status)) {
+                        cli_error("ERROR child pid=%ld exit=%d", (long)pid,
+                                  WEXITSTATUS(status));
+                    } else if (WIFSIGNALED(status)) {
+                        cli_error("ERROR child pid=%ld signal=%d", (long)pid,
+                                  WTERMSIG(status));
+                    }
+                }
                 continue;
             }
 
-            if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-                child_failures++;
-                if (WIFEXITED(status)) {
-                    cli_error("ERROR child pid=%ld exit=%d", (long)pid,
-                              WEXITSTATUS(status));
-                } else if (WIFSIGNALED(status)) {
-                    cli_error("ERROR child pid=%ld signal=%d", (long)pid,
-                              WTERMSIG(status));
+            if (pid < 0) {
+                if (errno == EINTR) {
+                    continue;
                 }
+                if (errno == ECHILD) {
+                    aborted = true;
+                    break;
+                }
+                cli_error("ERROR waitpid failed: %s", strerror(errno));
+                aborted = true;
+                break;
             }
+
+            timing_sleep_us(SUPERVISOR_STEP_US);
         }
+    } else {
+        terminate_children(pids, done, started);
     }
 
     verify_final(state);
-    cli_report(options, state, child_failures);
-    result = !launch_failed && child_failures == 0 &&
+    cli_report(options, state, aborted, child_failures);
+    result = !aborted && child_failures == 0 &&
                      atomic_load(&state->invariant_errors) == 0
                  ? 0
                  : 1;
