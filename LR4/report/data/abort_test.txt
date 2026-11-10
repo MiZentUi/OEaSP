@@ -1,0 +1,22 @@
+
+=== LR4 interprocess writers-readers ===
+mode=standard writers=2 readers=2 records=100 operations=100000 seed=1
+ROLE    ID  PID     OPS        TIMEOUTS   AVG_WAIT_MS  MAX_WAIT_MS  RECORDS   
+WRITER  0   576825  138        0          2.058        5.008        13800     
+WRITER  1   576826  145        0          1.954        4.941        14600     
+READER  0   576827  136        0          1.169        4.085        13600     
+READER  1   576828  137        0          1.137        3.859        13700     
+elapsed_ms=308.878 throughput_ops_s=1800.065
+operations=556/400000 timeouts=0 records=55700
+peak_readers=2 peak_writers=1 generation=284
+invariant_violations=3 child_failures=4 aborted=yes
+RESULT: FAILED
+
+--- STDERR ---
+[000308 ms] ERROR child pid=576825 signal=15
+[000308 ms] ERROR child pid=576826 signal=15
+[000308 ms] ERROR child pid=576827 signal=15
+[000308 ms] ERROR child pid=576828 signal=15
+[000308 ms] ERROR invariant active_writers=1
+[000308 ms] ERROR invariant readers_count=1
+[000308 ms] ERROR invariant access_gate value=0

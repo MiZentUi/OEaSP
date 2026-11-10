@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="430" viewBox="0 0 780 430" font-family="DejaVu Sans, Arial, sans-serif">
+<rect x="0" y="0" width="780" height="430" fill="#FFFFFF"/>
+<line x1="100.0" y1="335.0" x2="745.0" y2="335.0" stroke="#E8EAED" stroke-width="1.0"/>
+<text x="86.0" y="340.0" font-size="13" font-weight="normal" fill="#5F6368" text-anchor="end" >0</text>
+<line x1="100.0" y1="260.0" x2="745.0" y2="260.0" stroke="#E8EAED" stroke-width="1.0"/>
+<text x="86.0" y="265.0" font-size="13" font-weight="normal" fill="#5F6368" text-anchor="end" >2 000</text>
+<line x1="100.0" y1="185.0" x2="745.0" y2="185.0" stroke="#E8EAED" stroke-width="1.0"/>
+<text x="86.0" y="190.0" font-size="13" font-weight="normal" fill="#5F6368" text-anchor="end" >4 000</text>
+<line x1="100.0" y1="110.0" x2="745.0" y2="110.0" stroke="#E8EAED" stroke-width="1.0"/>
+<text x="86.0" y="115.0" font-size="13" font-weight="normal" fill="#5F6368" text-anchor="end" >6 000</text>
+<line x1="100.0" y1="35.0" x2="745.0" y2="35.0" stroke="#E8EAED" stroke-width="1.0"/>
+<text x="86.0" y="40.0" font-size="13" font-weight="normal" fill="#5F6368" text-anchor="end" >8 000</text>
+<line x1="100.0" y1="35.0" x2="100.0" y2="335.0" stroke="#202124" stroke-width="1.6"/>
+<line x1="100.0" y1="335.0" x2="745.0" y2="335.0" stroke="#202124" stroke-width="1.6"/>
+<text x="422.5" y="402.0" font-size="15" font-weight="normal" fill="#202124" text-anchor="middle" >Длительность чтения, мкс</text>
+<text x="24.0" y="185.0" font-size="15" font-weight="normal" fill="#202124" text-anchor="middle" transform="rotate(-90 24 185.0)">Пропускная способность, операций/с</text>
+<text x="180.6" y="363.0" font-size="14" font-weight="normal" fill="#202124" text-anchor="middle" >0</text>
+<rect x="142.3" y="41.7" width="76.6" height="293.3" fill="#1A73E8" fill-opacity="0.82"/>
+<line x1="180.6" y1="42.3" x2="180.6" y2="40.7" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="175.6" y1="42.3" x2="185.6" y2="42.3" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="175.6" y1="40.7" x2="185.6" y2="40.7" stroke="#5F6368" stroke-width="1.2"/>
+<text x="341.9" y="363.0" font-size="14" font-weight="normal" fill="#202124" text-anchor="middle" >100</text>
+<rect x="303.6" y="105.9" width="76.6" height="229.1" fill="#1A73E8" fill-opacity="0.82"/>
+<line x1="341.9" y1="138.3" x2="341.9" y2="41.5" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="336.9" y1="138.3" x2="346.9" y2="138.3" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="336.9" y1="41.5" x2="346.9" y2="41.5" stroke="#5F6368" stroke-width="1.2"/>
+<text x="503.1" y="363.0" font-size="14" font-weight="normal" fill="#202124" text-anchor="middle" >1 000</text>
+<rect x="464.8" y="244.5" width="76.6" height="90.5" fill="#1A73E8" fill-opacity="0.82"/>
+<line x1="503.1" y1="260.9" x2="503.1" y2="236.1" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="498.1" y1="260.9" x2="508.1" y2="260.9" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="498.1" y1="236.1" x2="508.1" y2="236.1" stroke="#5F6368" stroke-width="1.2"/>
+<text x="664.4" y="363.0" font-size="14" font-weight="normal" fill="#202124" text-anchor="middle" >5 000</text>
+<rect x="626.1" y="313.4" width="76.6" height="21.6" fill="#1A73E8" fill-opacity="0.82"/>
+<line x1="664.4" y1="320.4" x2="664.4" y2="307.8" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="659.4" y1="320.4" x2="669.4" y2="320.4" stroke="#5F6368" stroke-width="1.2"/>
+<line x1="659.4" y1="307.8" x2="669.4" y2="307.8" stroke="#5F6368" stroke-width="1.2"/>
+<rect x="100" y="7" width="18" height="12" fill="#1A73E8" fill-opacity="0.82"/>
+<text x="125.0" y="18.0" font-size="14" font-weight="normal" fill="#202124" text-anchor="start" >среднее по 3 запускам</text>
+</svg>

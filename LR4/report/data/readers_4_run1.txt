@@ -1,0 +1,15 @@
+
+=== LR4 interprocess writers-readers ===
+mode=standard writers=2 readers=4 records=100 operations=100 seed=1
+ROLE    ID  PID     OPS        TIMEOUTS   AVG_WAIT_MS  MAX_WAIT_MS  RECORDS   
+WRITER  0   576742  100        0          1.293        2.421        10000     
+WRITER  1   576743  100        0          1.290        2.373        10000     
+READER  0   576744  100        0          0.405        1.607        10000     
+READER  1   576745  100        0          0.422        1.633        10000     
+READER  2   576746  100        0          0.393        1.295        10000     
+READER  3   576747  100        0          0.419        1.671        10000     
+elapsed_ms=145.948 throughput_ops_s=4111.044
+operations=600/600 timeouts=0 records=60000
+peak_readers=4 peak_writers=1 generation=200
+invariant_violations=0 child_failures=0 aborted=no
+RESULT: OK

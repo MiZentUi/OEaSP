@@ -1,0 +1,54 @@
+[000000 ms] MANAGER pid=576830 START writers=2 readers=2 records=100 ops=2 write_us=50 read_us=50
+[000000 ms] WRITER 1 pid=576832 START records=100
+[000000 ms] WRITER 1 pid=576832 WAITING ACCESS=WRITE op=1
+[000000 ms] WRITER 1 pid=576832 ACQUIRED ACCESS=WRITE op=1
+[000000 ms] WRITER 1 pid=576832 WRITING generation=1 records=100
+[000000 ms] READER 0 pid=576833 START records=100
+[000000 ms] READER 0 pid=576833 WAITING ACCESS=READ op=1
+[000000 ms] READER 1 pid=576834 START records=100
+[000000 ms] READER 1 pid=576834 WAITING ACCESS=READ op=1
+[000000 ms] WRITER 0 pid=576831 START records=100
+[000000 ms] WRITER 0 pid=576831 WAITING ACCESS=WRITE op=1
+[000000 ms] WRITER 1 pid=576832 RELEASED ACCESS=WRITE op=1 wait_ms=0.010
+[000000 ms] WRITER 1 pid=576832 WAITING ACCESS=WRITE op=2
+[000000 ms] READER 0 pid=576833 ACQUIRED ACCESS=READ op=1 readers=1
+[000000 ms] READER 0 pid=576833 READING generation=1 records=100
+[000000 ms] READER 0 pid=576833 RELEASED ACCESS=READ op=1 wait_ms=0.266
+[000000 ms] READER 0 pid=576833 WAITING ACCESS=READ op=2
+[000001 ms] WRITER 1 pid=576832 ACQUIRED ACCESS=WRITE op=2
+[000001 ms] WRITER 1 pid=576832 WRITING generation=2 records=100
+[000001 ms] WRITER 1 pid=576832 RELEASED ACCESS=WRITE op=2 wait_ms=0.754
+[000001 ms] WRITER 1 pid=576832 FINISHED ops=2 timeouts=0
+[000001 ms] WRITER 0 pid=576831 ACQUIRED ACCESS=WRITE op=1
+[000001 ms] WRITER 0 pid=576831 WRITING generation=3 records=100
+[000001 ms] WRITER 0 pid=576831 RELEASED ACCESS=WRITE op=1 wait_ms=0.969
+[000001 ms] WRITER 0 pid=576831 WAITING ACCESS=WRITE op=2
+[000001 ms] READER 1 pid=576834 ACQUIRED ACCESS=READ op=1 readers=1
+[000001 ms] READER 1 pid=576834 READING generation=3 records=100
+[000001 ms] READER 1 pid=576834 RELEASED ACCESS=READ op=1 wait_ms=1.202
+[000001 ms] READER 1 pid=576834 WAITING ACCESS=READ op=2
+[000001 ms] WRITER 0 pid=576831 ACQUIRED ACCESS=WRITE op=2
+[000001 ms] WRITER 0 pid=576831 WRITING generation=4 records=100
+[000001 ms] WRITER 0 pid=576831 RELEASED ACCESS=WRITE op=2 wait_ms=0.108
+[000001 ms] WRITER 0 pid=576831 FINISHED ops=2 timeouts=0
+[000001 ms] READER 1 pid=576834 ACQUIRED ACCESS=READ op=2 readers=1
+[000001 ms] READER 1 pid=576834 READING generation=4 records=100
+[000001 ms] READER 0 pid=576833 ACQUIRED ACCESS=READ op=2 readers=2
+[000001 ms] READER 0 pid=576833 READING generation=4 records=100
+[000001 ms] READER 1 pid=576834 RELEASED ACCESS=READ op=2 wait_ms=0.090
+[000001 ms] READER 1 pid=576834 FINISHED ops=2 timeouts=0
+[000001 ms] READER 0 pid=576833 RELEASED ACCESS=READ op=2 wait_ms=1.112
+[000002 ms] READER 0 pid=576833 FINISHED ops=2 timeouts=0
+
+=== LR4 interprocess writers-readers ===
+mode=standard writers=2 readers=2 records=100 operations=2 seed=1
+ROLE    ID  PID     OPS        TIMEOUTS   AVG_WAIT_MS  MAX_WAIT_MS  RECORDS   
+WRITER  0   576831  2          0          0.538        0.969        200       
+WRITER  1   576832  2          0          0.382        0.754        200       
+READER  0   576833  2          0          0.689        1.112        200       
+READER  1   576834  2          0          0.646        1.202        200       
+elapsed_ms=5.336 throughput_ops_s=1499.312
+operations=8/8 timeouts=0 records=800
+peak_readers=2 peak_writers=1 generation=4
+invariant_violations=0 child_failures=0 aborted=no
+RESULT: OK

@@ -4,3 +4,6 @@
 [submodule "LR3/report/bsuir_typst"]
 	path = LR3/report/bsuir_typst
 	url = https://github.com/artemious3/bsuir_typst.git
+[submodule "LR4/report/bsuir_typst"]
+	path = LR4/report/bsuir_typst
+	url = https://github.com/artemious3/bsuir_typst.git
