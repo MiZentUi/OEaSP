@@ -11,6 +11,7 @@ math(EXPR DEFAULT_PORT "20000 + ${STUDENT_ID}")
 add_library(lr5_common STATIC
     src/common/timing.c
     src/common/logging.c
+    src/common/net.c
 )
 
 target_include_directories(lr5_common PUBLIC include)
