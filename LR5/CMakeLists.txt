@@ -23,6 +23,15 @@ target_compile_definitions(lr5_common PUBLIC
     _DEFAULT_SOURCE
 )
 
+add_executable(lr5-client
+    src/client/main.c
+    src/client/cli.c
+    src/client/client.c
+)
+
+target_link_libraries(lr5-client PRIVATE lr5_common)
+
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(lr5_common PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(lr5-client PRIVATE -Wall -Wextra -Wpedantic)
 endif()
