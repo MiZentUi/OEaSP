@@ -12,6 +12,7 @@ add_library(lr5_common STATIC
     src/common/timing.c
     src/common/logging.c
     src/common/net.c
+    src/common/http.c
 )
 
 target_include_directories(lr5_common PUBLIC include)
