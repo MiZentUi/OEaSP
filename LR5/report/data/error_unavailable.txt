@@ -1,0 +1,3 @@
+[20:21:11.037] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=1 result=ERROR error="connect: Connection refused (111)"
+SUMMARY variant=26 id=1 host=127.0.0.1 port=1 method=GET path=/ requests=1 success=0 errors=1 timeouts=0 status_2xx=0 status_4xx=0 status_5xx=0 sent_bytes=0 recv_bytes=0 total_ms=0.423 avg_request_ms=0.423 avg_connect_ms=0.000 avg_ttfb_ms=0.000 throughput_kib_s=0.000
+RESULT: FAILED

@@ -1,0 +1,6 @@
+[20:21:11.033] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=REQUEST requestId=1 method=GET path=/chunked
+[20:21:11.033] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=CONNECT requestId=1 result=OK connect_ms=0.282
+[20:21:11.034] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=SEND requestId=1 result=OK size=113
+[20:21:11.034] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=1 result=ERROR error="unsupported transfer-encoding: chunked"
+SUMMARY variant=26 id=1 host=127.0.0.1 port=20103 method=GET path=/chunked requests=1 success=0 errors=1 timeouts=0 status_2xx=0 status_4xx=0 status_5xx=0 sent_bytes=113 recv_bytes=0 total_ms=1.343 avg_request_ms=1.343 avg_connect_ms=0.000 avg_ttfb_ms=0.000 throughput_kib_s=82.163
+RESULT: FAILED

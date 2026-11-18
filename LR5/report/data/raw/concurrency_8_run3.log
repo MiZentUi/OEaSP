@@ -1,0 +1,48 @@
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 1
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=1 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.801 avg_request_ms=0.516 avg_connect_ms=0.051 avg_ttfb_ms=0.410 throughput_kib_s=16003.000
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 2
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=2 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.134 avg_request_ms=0.503 avg_connect_ms=0.038 avg_ttfb_ms=0.412 throughput_kib_s=16427.377
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 3
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=3 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=24.864 avg_request_ms=0.497 avg_connect_ms=0.041 avg_ttfb_ms=0.406 throughput_kib_s=16605.907
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 4
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=4 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.436 avg_request_ms=0.509 avg_connect_ms=0.039 avg_ttfb_ms=0.422 throughput_kib_s=16232.808
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 5
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=5 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.220 avg_request_ms=0.504 avg_connect_ms=0.043 avg_ttfb_ms=0.410 throughput_kib_s=16371.468
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 6
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=6 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.621 avg_request_ms=0.512 avg_connect_ms=0.040 avg_ttfb_ms=0.424 throughput_kib_s=16115.076
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 7
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=7 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.406 avg_request_ms=0.508 avg_connect_ms=0.039 avg_ttfb_ms=0.417 throughput_kib_s=16251.488
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 8
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=8 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=25.253 avg_request_ms=0.505 avg_connect_ms=0.038 avg_ttfb_ms=0.422 throughput_kib_s=16350.022
+RESULT: OK
+--- stderr ---

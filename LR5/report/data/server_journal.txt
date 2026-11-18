@@ -1,0 +1,5 @@
+[20:21:10.821] ROLE=SERVER op=START host=127.0.0.1 port=20103 timeout_ms=5000 backlog=16 max_request=8192 result=OK
+[20:21:11.028] ROLE=SERVER peer=127.0.0.1:53840 requestId=1 op=REQUEST method=GET path=/large status=200 body=131072 result=OK
+[20:21:11.034] ROLE=SERVER peer=127.0.0.1:53848 requestId=2 op=REQUEST method=GET path=/chunked status=200 body=15 result=OK
+[20:21:11.043] ROLE=SERVER peer=127.0.0.1:53864 requestId=3 op=REQUEST method=HEAD path=/large status=200 body=0 result=OK
+[20:21:11.044] ROLE=SERVER op=STOP result=OK

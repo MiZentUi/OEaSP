@@ -1,0 +1,16 @@
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /chunked --count 10 --timeout-ms 5000 --id 1
+exit=1
+--- stdout ---
+SUMMARY variant=26 id=1 host=127.0.0.1 port=20103 method=GET path=/chunked requests=10 success=0 errors=10 timeouts=0 status_2xx=0 status_4xx=0 status_5xx=0 sent_bytes=1130 recv_bytes=0 total_ms=16.218 avg_request_ms=1.622 avg_connect_ms=0.000 avg_ttfb_ms=0.000 throughput_kib_s=68.042
+RESULT: FAILED
+--- stderr ---
+[20:18:39.656] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=1 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.658] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=2 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.660] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=3 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.662] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=4 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.663] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=5 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.664] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=6 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.666] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=7 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.667] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=8 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.669] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=9 result=ERROR error="unsupported transfer-encoding: chunked"
+[20:18:39.670] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=10 result=ERROR error="unsupported transfer-encoding: chunked"

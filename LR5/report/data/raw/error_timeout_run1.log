@@ -1,0 +1,16 @@
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /slow --count 10 --timeout-ms 10 --id 1
+exit=1
+--- stdout ---
+SUMMARY variant=26 id=1 host=127.0.0.1 port=20103 method=GET path=/slow requests=10 success=0 errors=10 timeouts=10 status_2xx=0 status_4xx=0 status_5xx=0 sent_bytes=1100 recv_bytes=0 total_ms=97.719 avg_request_ms=9.772 avg_connect_ms=0.000 avg_ttfb_ms=0.000 throughput_kib_s=10.993
+RESULT: FAILED
+--- stderr ---
+[20:18:39.331] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=1 result=ERROR error="recv body: timeout"
+[20:18:39.340] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=2 result=ERROR error="recv body: timeout"
+[20:18:39.350] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=3 result=ERROR error="recv body: timeout"
+[20:18:39.360] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=4 result=ERROR error="recv body: timeout"
+[20:18:39.370] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=5 result=ERROR error="recv body: timeout"
+[20:18:39.380] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=6 result=ERROR error="recv body: timeout"
+[20:18:39.389] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=7 result=ERROR error="recv body: timeout"
+[20:18:39.399] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=8 result=ERROR error="recv body: timeout"
+[20:18:39.409] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=9 result=ERROR error="recv body: timeout"
+[20:18:39.419] ROLE=CLIENT id=1 peer=127.0.0.1:20103 op=RECV requestId=10 result=ERROR error="recv body: timeout"

@@ -1,0 +1,16 @@
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 1 --method GET --path / --count 10 --timeout-ms 500 --id 1
+exit=1
+--- stdout ---
+SUMMARY variant=26 id=1 host=127.0.0.1 port=1 method=GET path=/ requests=10 success=0 errors=10 timeouts=0 status_2xx=0 status_4xx=0 status_5xx=0 sent_bytes=0 recv_bytes=0 total_ms=0.688 avg_request_ms=0.069 avg_connect_ms=0.000 avg_ttfb_ms=0.000 throughput_kib_s=0.000
+RESULT: FAILED
+--- stderr ---
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=1 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=2 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=3 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=4 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=5 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=6 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=7 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=8 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=9 result=ERROR error="connect: Connection refused (111)"
+[20:18:39.651] ROLE=CLIENT id=1 peer=127.0.0.1:1 op=CONNECT requestId=10 result=ERROR error="connect: Connection refused (111)"

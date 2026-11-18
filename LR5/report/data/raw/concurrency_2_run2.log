@@ -1,0 +1,12 @@
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 1
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=1 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=17.306 avg_request_ms=0.346 avg_connect_ms=0.042 avg_ttfb_ms=0.250 throughput_kib_s=23857.998
+RESULT: OK
+--- stderr ---
+$ /home/mizentui/bsuir/OEaSP/LR5/build/client --quiet --host 127.0.0.1 --port 20103 --method GET --path /medium --count 50 --timeout-ms 5000 --id 2
+exit=0
+--- stdout ---
+SUMMARY variant=26 id=2 host=127.0.0.1 port=20103 method=GET path=/medium requests=50 success=50 errors=0 timeouts=0 status_2xx=50 status_4xx=0 status_5xx=0 sent_bytes=5600 recv_bytes=417200 total_ms=16.496 avg_request_ms=0.330 avg_connect_ms=0.039 avg_ttfb_ms=0.242 throughput_kib_s=25030.167
+RESULT: OK
+--- stderr ---
